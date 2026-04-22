@@ -1,63 +1,51 @@
 """
-01 — Build a small checkerboard spinless-fermion fPEPS and save it to JSON.
+01 — Load the CI PEPS from CI_states/ and re-save it as JSON.
 
-This shows the minimum recipe: pick a lattice geometry, pick fermionic operators
-with a chosen abelian symmetry, build rank-5 on-site tensors, wrap them in a
-`Peps`, and serialize via `Peps.to_dict`.
+The CI states in ``examples/CI_states/`` were produced with a torch backend on a
+``RectangularUnitcell`` lattice with pattern ``[[0,1],[1,0]]`` (Z2-symmetric
+spinless fermions, D=4). The state JSON is in yastn's modern ``Peps.to_dict``
+format (``type='Peps'``, ``dict_ver=1``), so ``yastn.from_dict`` can rebuild it
+directly under our numpy backend; no pickle / no model wrapper needed.
+
+This script reads that JSON, prints state info, and re-saves under a new
+filename via :mod:`_jsonio` (round-trip sanity check + a stable input name
+for scripts 02/03).
 """
-import json
-import os
+import os, pickle
 
 import yastn
-import yastn.tn.fpeps as fpeps
 
-OUT_DIR = os.path.join(os.path.dirname(__file__), "out")
-STATE_PATH = os.path.join(OUT_DIR, "fci_square_state.json")
+import _jsonio
+
+HERE = os.path.dirname(__file__)
+CI_STATE_IN = os.path.join(HERE, "CI_states",
+                           "Z2_t1_1.0_2x2_N2_D_4_chi_128_state.json")
+OUT_DIR = os.path.join(HERE, "out")
+STATE_PATH = os.path.join(OUT_DIR, "Z2_t1_1.0_2x2_N2_D_4_chi_128_state.json")
 
 
-def build_state(D=2, sym="Z2", seed=0):
-    # yastn config: fermionic abelian tensors with numpy backend.
+def load_CI_state(path=CI_STATE_IN, sym="Z2"):
+    # initialize the yastn config
     config = yastn.make_config(sym=sym, fermionic=True, default_dtype="complex128")
-    config.backend.random_seed(seed)
-
-    # Spinless fermion operators (c, c^+, n, identity) with matching symmetry.
-    ops = yastn.operators.SpinlessFermions(sym=sym, backend=config.backend,
-                                           default_dtype="complex128")
-
-    # 2-site checkerboard unit cell (A / B sublattices), matching the FCI_square setup.
-    geometry = fpeps.CheckerboardLattice()
-
-    # Virtual leg shared across the four auxiliary directions of each on-site tensor.
-    # For Z2 we split D between the two charge sectors.
-    if sym == "Z2":
-        t_sectors = (0, 1)
-        D_sectors = (D // 2, D - D // 2)
-    else:
-        t_sectors = (0, 1)
-        D_sectors = (D // 2, D - D // 2)
-    vleg = yastn.Leg(config, s=1, t=t_sectors, D=D_sectors)
-    pleg = ops.space()  # physical leg carried by the fermion operators
-
-    # Rank-5 on-site tensor: legs [top, left, bottom, right, physical].
-    def random_site():
-        return yastn.rand(
-            config,
-            legs=[vleg.conj(), vleg, vleg, vleg.conj(), pleg],
-        )
-
-    psi = fpeps.Peps(geometry, tensors={s: random_site() for s in geometry.sites()})
+    # load state dict from json file
+    with open(path, "r") as f:
+        d = _jsonio.load(f)
+    psi = yastn.from_dict(d, config=config)
     return psi
 
 
 def save_state(psi, path):
     os.makedirs(os.path.dirname(path), exist_ok=True)
     with open(path, "w") as f:
-        json.dump(psi.to_dict(), f)
+        # `_jsonio.dump` uses the NumPy_Encoder convention from
+        # tn-torch_dev_square so JSONs stay round-trip-compatible.
+        _jsonio.dump(psi.to_dict(), f)
     print(f"saved state to {path}")
 
 
 if __name__ == "__main__":
-    psi = build_state(D=2, sym="Z2")
+    psi = load_CI_state()
+    print(f"geometry: {psi.geometry}")
     for site in psi.sites():
         print(f"site {site}: tensor shape = {psi[site].get_shape()}")
     save_state(psi, STATE_PATH)
