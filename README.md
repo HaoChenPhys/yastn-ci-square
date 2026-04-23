@@ -4,6 +4,9 @@ Minimal, self-contained demo of using [yastn](https://github.com/yastn/yastn)
 directly to load a converged Chern insulator (CI) iPEPS / CTM environment on the square lattice
 and measure observables from it. Only `yastn` is imported — no wrapper code.
 
+For the full API reference and further examples, see the
+[yastn documentation](https://yastn.github.io/yastn/index.html).
+
 ## yastn tensor basics
 
 A `yastn.Tensor` is a block-sparse, symmetry-aware tensor. Each tensor lives
