@@ -80,7 +80,10 @@ dispatches block-by-block.
 
 The starting point is a folder of pre-converged CI fixtures under
 `examples/CI_states/`, produced separately on a torch backend
-(`Z2`-symmetric spinless fermions, D=4, 2x2 `RectangularUnitcell`):
+(`Z2`-symmetric spinless fermions, D=4, 2x2 `RectangularUnitcell`). The
+underlying Chern insulator model is the "Nearly Flatbands with Nontrivial
+Topology" model of Sun, Gu, Katsura, and Das Sarma,
+[Phys. Rev. Lett. 106, 236803 (2011)](https://journals.aps.org/prl/abstract/10.1103/PhysRevLett.106.236803):
 
 - `Z2_..._state.json` — the standalone PEPS `Peps.to_dict` payload (chi-independent).
 - `Z2_..._chi_{32,64,128}_state_ctm_env.json` — full `EnvCTM.to_dict` payloads
